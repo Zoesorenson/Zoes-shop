@@ -9,7 +9,7 @@ from typing import Any
 import requests
 
 
-DEFAULT_USERNAME = "zoessorenson"
+DEFAULT_USERNAME = "shopy2z"
 env_username = (os.getenv("DEPOP_USERNAME") or "").strip()
 DEPOP_USERNAME = env_username or DEFAULT_USERNAME
 API_URL = f"https://webapi.depop.com/api/v2/shop/{DEPOP_USERNAME}/products/"
