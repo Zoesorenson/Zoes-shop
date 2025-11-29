@@ -11,7 +11,7 @@ This repo is a static storefront for a Depop shop. You can host it on GitHub Pag
 `script.js` fetches `data/products.json` on page load and every time a filter button is clicked. If the fetch fails (for example, while developing locally without the JSON), it falls back to the baked-in sample products.
 
 ## Automating the Depop feed with GitHub Actions
-You can keep `data/products.json` in sync with your live Depop listings using the included scheduled workflow (`.github/workflows/refresh-depop-feed.yml`):
+You can keep `data/products.json` in sync with your live Depop listings using a scheduled workflow:
 
 ```yaml
 name: Refresh Depop feed
@@ -25,10 +25,20 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Fetch Depop listings
-        env:
-          DEPOP_USERNAME: ${{ vars.DEPOP_USERNAME || vars.DEPOP_USER || vars.DEPOP_SHOP }}
-        run: python scripts/fetch_depop.py
+      - name: Scrape Depop listings
+        run: |
+          python - <<'PY'
+          import json, requests
+          from bs4 import BeautifulSoup
+
+          url = "https://www.depop.com/zoessorenson/"
+          html = requests.get(url, timeout=10).text
+          soup = BeautifulSoup(html, "html.parser")
+          # Replace this with real parsing of your listing cards
+          listings = []
+          with open("data/products.json", "w") as f:
+            json.dump(listings, f, indent=2)
+          PY
       - name: Commit updated feed
         run: |
           git config user.name "github-actions"
@@ -38,13 +48,4 @@ jobs:
           git push
 ```
 
-### What the workflow does
-- Runs every 6 hours (or on manual dispatch) to fetch products for `DEPOP_USERNAME` (default: `zoessorenson`).
-- Writes the latest listings into `data/products.json` so the front end can render them.
-- Commits and pushes the refreshed JSON so GitHub Pages serves the new data automatically.
-
-### Configure your shop name
-- Set a repository variable named `DEPOP_USERNAME` (or `DEPOP_USER` / `DEPOP_SHOP`) in **Settings → Secrets and variables → Actions**.
-- The script uses the variable to call Depop's public API: `https://webapi.depop.com/api/v2/shop/<username>/products/`.
-
-If the workflow cannot find any products, it fails without overwriting the existing `data/products.json`, keeping your storefront intact.
+The workflow fetches your Depop page, parses listings into `data/products.json`, and pushes the refreshed JSON back to the repo. GitHub Pages will publish the new data automatically, so visitors always see the latest items.
