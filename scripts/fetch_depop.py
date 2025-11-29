@@ -4,7 +4,7 @@ from __future__ import annotations
 import json
 import os
 from pathlib import Path
-from typing import Any
+from typing import Any, Optional
 
 import requests
 
@@ -13,6 +13,11 @@ DEFAULT_USERNAME = "shopy2z"
 env_username = (os.getenv("DEPOP_USERNAME") or "").strip()
 DEPOP_USERNAME = env_username or DEFAULT_USERNAME
 API_URL = f"https://webapi.depop.com/api/v2/shop/{DEPOP_USERNAME}/products/"
+DEFAULT_HEADERS = {
+    "Accept": "application/json",
+    # Depop returns 403s to generic clients; use a descriptive agent to reduce blocks.
+    "User-Agent": "ZoesShopDataFetcher/1.0",
+}
 OUTPUT_FILE = Path(__file__).resolve().parent.parent / "data" / "products.json"
 
 
@@ -65,9 +70,23 @@ def normalize_product(raw: dict[str, Any]) -> dict[str, str]:
     }
 
 
-def fetch_products() -> list[dict[str, str]]:
-    response = requests.get(API_URL, params={"limit": 200}, timeout=20)
-    response.raise_for_status()
+def fetch_products() -> Optional[list[dict[str, str]]]:
+    try:
+        response = requests.get(
+            API_URL,
+            params={"limit": 200},
+            headers=DEFAULT_HEADERS,
+            timeout=20,
+        )
+        response.raise_for_status()
+    except requests.HTTPError as exc:
+        status = exc.response.status_code if exc.response is not None else "?"
+        print(f"Warning: Depop API returned HTTP {status}; using cached products if available.")
+        return None
+    except requests.RequestException as exc:
+        print(f"Warning: unable to reach Depop API ({exc}); using cached products if available.")
+        return None
+
     payload: Any = response.json()
 
     products = payload.get("products") or payload.get("items") or []
@@ -79,8 +98,20 @@ def fetch_products() -> list[dict[str, str]]:
 
 def main() -> None:
     products = fetch_products()
+
     if not products:
-        raise SystemExit("No products found in Depop response; aborting to keep existing feed.")
+        if OUTPUT_FILE.exists():
+            cached = json.loads(OUTPUT_FILE.read_text())
+            if cached:
+                print(
+                    "No fresh products fetched; keeping existing feed from"
+                    f" {OUTPUT_FILE}."
+                )
+                return
+
+        raise SystemExit(
+            "No products fetched and no cached feed available; aborting without changes."
+        )
 
     OUTPUT_FILE.parent.mkdir(parents=True, exist_ok=True)
     OUTPUT_FILE.write_text(json.dumps(products, indent=2))
