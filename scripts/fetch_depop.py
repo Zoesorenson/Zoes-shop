@@ -4,7 +4,7 @@ from __future__ import annotations
 import json
 import os
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any, Iterable, Optional
 
 import requests
 
@@ -12,13 +12,24 @@ import requests
 DEFAULT_USERNAME = "shopy2z"
 env_username = (os.getenv("DEPOP_USERNAME") or "").strip()
 DEPOP_USERNAME = env_username or DEFAULT_USERNAME
-API_URL = f"https://webapi.depop.com/api/v2/shop/{DEPOP_USERNAME}/products/"
 DEFAULT_HEADERS = {
     "Accept": "application/json",
-    # Depop returns 403s to generic clients; use a descriptive agent to reduce blocks.
-    "User-Agent": "ZoesShopDataFetcher/1.0",
+    "Accept-Language": "en-US,en;q=0.9",
+    # Depop can return 403s to generic clients; mimic a real browser to reduce blocks.
+    "User-Agent": (
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+        "AppleWebKit/537.36 (KHTML, like Gecko) "
+        "Chrome/124.0.0.0 Safari/537.36"
+    ),
+    "Origin": "https://www.depop.com",
 }
 OUTPUT_FILE = Path(__file__).resolve().parent.parent / "data" / "products.json"
+
+
+def _endpoint_urls(username: str) -> Iterable[tuple[str, str]]:
+    yield "primary", f"https://webapi.depop.com/api/v2/shop/{username}/products/"
+    # Fallback to the older endpoint if the v2 API blocks the request.
+    yield "legacy", f"https://webapi.depop.com/api/v1/shop/{username}/products/"
 
 
 def normalize_product(raw: dict[str, Any]) -> dict[str, str]:
@@ -71,32 +82,53 @@ def normalize_product(raw: dict[str, Any]) -> dict[str, str]:
 
 
 def fetch_products() -> Optional[list[dict[str, str]]]:
-    try:
-        response = requests.get(
-            API_URL,
-            params={"limit": 200},
-            headers=DEFAULT_HEADERS,
-            timeout=20,
+    session = requests.Session()
+    session.headers.update({
+        **DEFAULT_HEADERS,
+        "Referer": f"https://www.depop.com/{DEPOP_USERNAME}/",
+    })
+
+    for label, url in _endpoint_urls(DEPOP_USERNAME):
+        try:
+            response = session.get(
+                url,
+                params={"limit": 200},
+                timeout=20,
+            )
+            response.raise_for_status()
+        except requests.HTTPError as exc:
+            status = exc.response.status_code if exc.response is not None else "?"
+            print(
+                f"Warning: Depop {label} endpoint returned HTTP {status}; "
+                "trying next option."
+            )
+            continue
+        except requests.RequestException as exc:
+            print(
+                f"Warning: unable to reach Depop {label} endpoint ({exc}); "
+                "trying next option."
+            )
+            continue
+
+        payload: Any = response.json()
+        products = payload.get("products") or payload.get("items") or []
+        normalized = [normalize_product(item) for item in products]
+        filtered = [item for item in normalized if item["url"] and item["image"]]
+
+        if filtered:
+            return filtered
+
+        print(
+            f"Warning: Depop {label} endpoint returned no products; trying next option."
         )
-        response.raise_for_status()
-    except requests.HTTPError as exc:
-        status = exc.response.status_code if exc.response is not None else "?"
-        print(f"Warning: Depop API returned HTTP {status}; using cached products if available.")
-        return None
-    except requests.RequestException as exc:
-        print(f"Warning: unable to reach Depop API ({exc}); using cached products if available.")
-        return None
 
-    payload: Any = response.json()
-
-    products = payload.get("products") or payload.get("items") or []
-    normalized = [normalize_product(item) for item in products]
-
-    # Filter out entries missing critical fields
-    return [item for item in normalized if item["url"] and item["image"]]
+    return None
 
 
 def main() -> None:
+    if not env_username:
+        print("DEPOP_USERNAME not set; using default from script.")
+
     products = fetch_products()
 
     if not products:
