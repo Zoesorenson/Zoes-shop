@@ -4,7 +4,7 @@ document.addEventListener("DOMContentLoaded", () => {
     year.textContent = new Date().getFullYear();
   }
 
-  const curatedProducts = [
+  const fallbackProducts = [
     {
       title: "Vera Bradley satchel + wallet",
       price: "$25.98",
@@ -79,6 +79,8 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   ];
 
+  let curatedProducts = fallbackProducts;
+
   const productGrid = document.getElementById("depop-grid");
   const filterButtons = document.querySelectorAll(".filter-btn");
 
@@ -113,17 +115,33 @@ document.addEventListener("DOMContentLoaded", () => {
     productGrid.innerHTML = markup;
   };
 
+  const loadProducts = async (category = "all") => {
+    try {
+      const response = await fetch("data/products.json", { cache: "no-store" });
+      if (response.ok) {
+        const data = await response.json();
+        if (Array.isArray(data) && data.length) {
+          curatedProducts = data;
+        }
+      }
+    } catch (error) {
+      curatedProducts = fallbackProducts;
+    }
+
+    renderProducts(category);
+  };
+
   if (filterButtons.length && productGrid) {
     filterButtons.forEach((btn) => {
       btn.addEventListener("click", () => {
         filterButtons.forEach((button) => button.classList.remove("active"));
         btn.classList.add("active");
-        renderProducts(btn.dataset.filter || "all");
+        loadProducts(btn.dataset.filter || "all");
       });
     });
   }
 
-  renderProducts();
+  loadProducts();
 
   const form = document.getElementById("rsvp-form");
   if (form) {
