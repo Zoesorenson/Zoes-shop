@@ -1,0 +1,74 @@
+[
+  {
+    "title": "Vera Bradley satchel + wallet",
+    "price": "$25.98",
+    "url": "https://www.depop.com/products/shopy2z-vera-bradley-bag-with-2/",
+    "image": "https://media-photos.depop.com/b1/34544665/3156885948_ea31beb4d4d443668710b7549ca88b66/P0.jpg",
+    "description": "Floral overnight-sized bag with both top handles and a crossbody strap. Matching wallet included.",
+    "category": "accessories",
+    "tag": "Bag drop"
+  },
+  {
+    "title": "Red Hollister V-neck sweater",
+    "price": "$32.00",
+    "url": "https://www.depop.com/products/shopy2z-red-hollister-co-v-neck-sweater/",
+    "image": "https://media-photos.depop.com/b1/34544665/3156880933_c5c2c841ed8b4fcf8aae3f82a0048b6d/P0.jpg",
+    "description": "Soft rib knit with a deep neckline. Perfect layered over a slip or worn solo.",
+    "category": "tops",
+    "tag": "Knitwear"
+  },
+  {
+    "title": "L.L. Bean sweat shorts (M)",
+    "price": "$10.00",
+    "url": "https://www.depop.com/products/shopy2z-ll-bean-sweat-shorts-size/",
+    "image": "https://media-photos.depop.com/b1/34544665/3109706700_d0fb393dc2704837897b127c2d6a1d40/P0.jpg",
+    "description": "Boxy mid-rise fit with pockets. Made for off-duty coffee runs.",
+    "category": "bottoms",
+    "tag": "Weekend set"
+  },
+  {
+    "title": "Striped cropped tee",
+    "price": "$9.99",
+    "url": "https://www.depop.com/products/shopy2z-cropped-white-and-black-stripe/",
+    "image": "https://media-photos.depop.com/b1/34544665/3081083372_cdc188864bbc4be89dd32551acd579af/P0.jpg",
+    "description": "White + black rib tee that hits right at the waist. Looks ace with cargos.",
+    "category": "tops",
+    "tag": "Everyday top"
+  },
+  {
+    "title": "Brown + white fuzzy knit",
+    "price": "$15.88",
+    "url": "https://www.depop.com/products/shopy2z-super-cute-brown-and-white/",
+    "image": "https://media-photos.depop.com/b1/34544665/3069696416_6b55349fc5f647308bd4cf9896f05b40/P0.jpg",
+    "description": "Cow-print inspired sweater vest that layers over tees and dresses.",
+    "category": "tops",
+    "tag": "Statement knit"
+  },
+  {
+    "title": "Pattern windbreaker shell",
+    "price": "$20.22",
+    "url": "https://www.depop.com/products/shopy2z-cool-pattern-wind-jacket-shell/",
+    "image": "https://media-photos.depop.com/b1/34544665/3030475815_b81c1f148230453198136c838404f862/P0.jpg",
+    "description": "90s shell jacket with teal + lilac print. Lightweight and oversized.",
+    "category": "outerwear",
+    "tag": "Outerwear"
+  },
+  {
+    "title": "Black & gold pearl necklace",
+    "price": "$10.10",
+    "url": "https://www.depop.com/products/shopy2z-black-and-gold-pearl-necklace-adfc/",
+    "image": "https://media-photos.depop.com/b1/34544665/3030620594_e8dbe41eadca419ca8f517c9ef6ba325/P0.jpg",
+    "description": "Layer-friendly necklace featuring alternating pearls and gold beads.",
+    "category": "accessories",
+    "tag": "Jewelry"
+  },
+  {
+    "title": "Faux fur lined suede coat",
+    "price": "$70.00",
+    "url": "https://www.depop.com/products/shopy2z-brown-faux-fur-lined-suede/",
+    "image": "https://media-photos.depop.com/b1/34544665/3020548832_69dbbb5180834b43a63b1fef382af78c/P0.jpg",
+    "description": "Chocolate brown suede with plush lining — the coziest winter staple.",
+    "category": "outerwear",
+    "tag": "Winter edit"
+  }
+]
