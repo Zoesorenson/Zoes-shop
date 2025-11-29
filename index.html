@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Zoe's Depop Closet</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600&family=Work+Sans:wght@300;400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="container header-content">
+        <div class="brand">
+          <span class="brand-mark">ZS</span>
+          <div>
+            <p class="eyebrow">Depop · @zoessorenson</p>
+            <h1>Zoe's Closet</h1>
+          </div>
+        </div>
+        <nav>
+          <a href="#shop">Shop</a>
+          <a href="#behind">Behind the closet</a>
+          <a href="#policies">Policies</a>
+          <a href="#contact">Hold request</a>
+        </nav>
+        <a class="btn outlined" href="https://www.depop.com/zoessorenson/" target="_blank" rel="noreferrer">Open Depop</a>
+      </div>
+    </header>
+
+    <main>
+      <section class="hero">
+        <div class="container hero-grid">
+          <div>
+            <p class="eyebrow">Active today · shipping daily</p>
+            <h2>Real Depop drops from Zoe's room in Calgary.</h2>
+            <p class="lead">
+              Vintage-inspired knits, easy denim, and accessories that are priced to keep wardrobes moving. Message before you buy so I can unboost the listing and save you a few dollars.
+            </p>
+            <div class="hero-cta">
+              <a class="btn primary" href="https://www.depop.com/zoessorenson/" target="_blank" rel="noreferrer">Shop the Depop feed</a>
+              <a class="btn ghost" href="#shop">Browse featured items</a>
+            </div>
+            <ul class="hero-highlights">
+              <li><strong>24</strong> orders shipped</li>
+              <li><strong>54</strong> lovely followers</li>
+              <li><strong>Daily</strong> drop-offs + holds</li>
+            </ul>
+          </div>
+          <div class="hero-card">
+              <img
+              src="https://media-photos.depop.com/b1/34544665/3156885948_ea31beb4d4d443668710b7549ca88b66/P0.jpg"
+              alt="Vera Bradley floral bag from Zoe's Depop closet"
+            />
+            <div class="hero-card__body">
+              <p>Vera Bradley satchel</p>
+              <span>$25.98 · Includes matching wallet</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="shop" class="section">
+        <div class="container">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Live from Depop</p>
+              <h3>Fresh pulls from @zoessorenson</h3>
+            </div>
+            <p class="section-lead">
+              Every product card below links directly to the real Depop listing so you can favorite, DM, or check out from the app. Filter by vibe to plan your bundle.
+            </p>
+          </div>
+          <div class="filters" role="tablist" aria-label="Filter Depop items by category">
+            <button class="filter-btn active" data-filter="all" role="tab">All</button>
+            <button class="filter-btn" data-filter="tops" role="tab">Tops & knits</button>
+            <button class="filter-btn" data-filter="bottoms" role="tab">Bottoms</button>
+            <button class="filter-btn" data-filter="outerwear" role="tab">Outerwear</button>
+            <button class="filter-btn" data-filter="accessories" role="tab">Accessories</button>
+          </div>
+          <div class="product-grid" id="depop-grid" aria-live="polite"></div>
+          <p class="note">Listings pulled from Depop on Nov 29, 2025. Tap through for the latest status or DM me there for holds.</p>
+        </div>
+      </section>
+
+      <section id="behind" class="section story">
+        <div class="container">
+          <div class="story-grid">
+            <article class="story-card story-card--text">
+              <p class="eyebrow">Behind the closet</p>
+              <h3>Curated staples, priced for recirculation.</h3>
+              <p>
+                I list what I actually reach for: Y2K cardigans, soft sweats, classic denim, and statement bags that take a campus outfit up a notch. Everything is steamed, lint rolled, and photographed in natural light so you can see the real condition.
+              </p>
+              <ul class="tag-list">
+                <li>Weekly drops</li>
+                <li>Bundles welcome</li>
+                <li>Carbon-neutral shipping labels</li>
+              </ul>
+            </article>
+            <article class="story-card story-card--media">
+              <div class="story-stack">
+                <img
+                  src="https://media-photos.depop.com/b1/34544665/3030475815_b81c1f148230453198136c838404f862/P0.jpg"
+                  alt="Windbreaker jacket flatlay"
+                />
+                <img
+                  src="https://media-photos.depop.com/b1/34544665/3081083372_cdc188864bbc4be89dd32551acd579af/P0.jpg"
+                  alt="Striped crop top hanging on rack"
+                />
+              </div>
+            </article>
+            <article class="story-card story-card--quote">
+              <p class="eyebrow">Message before checkout</p>
+              <p class="quote">
+                “Shipping daily — message me before you buy so I can unboost the listing!!”
+              </p>
+              <p class="quote-meta">Zoe on Depop</p>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section id="policies" class="section badges">
+        <div class="container">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Shop policies</p>
+              <h3>How I prep, pack, and ship every order.</h3>
+            </div>
+          </div>
+          <div class="badge-grid">
+            <article class="badge-card">
+              <h4>Same-week shipping</h4>
+              <p>Label is purchased right after payment and dropped off within 1–2 business days.</p>
+            </article>
+            <article class="badge-card">
+              <h4>Bundle discounts</h4>
+              <p>DM me on Depop for custom bundles — I can remove boosts and pass the savings on.</p>
+            </article>
+            <article class="badge-card">
+              <h4>Condition upfront</h4>
+              <p>Every listing includes close-ups of wear, measurements, and fabric notes so there are no surprises.</p>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section id="contact" class="section visit">
+        <div class="container visit-grid">
+          <div>
+            <p class="eyebrow">Need a hold or measurement?</p>
+            <h3>Leave a note and I'll reply between classes.</h3>
+            <p>
+              Use the form for hold requests, bundle ideas, or measurement questions if you can't DM on Depop. Please include the listing link so I can pin it quickly.
+            </p>
+            <form id="rsvp-form" class="rsvp-form">
+              <label>
+                Name (or Depop @)
+                <input type="text" name="name" placeholder="@zoessorenson" required />
+              </label>
+              <label>
+                Email
+                <input type="email" name="email" placeholder="you@email.com" required />
+              </label>
+              <label>
+                Message
+                <textarea name="message" rows="4" placeholder="Link the listing + what you need" required></textarea>
+              </label>
+              <button class="btn primary" type="submit">Send request</button>
+              <p class="form-feedback" aria-live="polite"></p>
+            </form>
+          </div>
+          <div class="visit-card">
+              <img
+              src="https://media-photos.depop.com/b1/34544665/3020548832_69dbbb5180834b43a63b1fef382af78c/P0.jpg"
+              alt="Brown suede coat on hanger"
+            />
+            <div>
+              <p class="eyebrow">Shipping rhythm</p>
+              <h4>Drop-offs every Mon / Thu</h4>
+              <p>Located in Calgary, AB. Tracked shipping across Canada + USA via Depop labels.</p>
+              <a class="btn ghost" href="https://www.depop.com/zoessorenson/" target="_blank" rel="noreferrer">DM on Depop</a>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container footer-grid">
+        <div>
+          <h4>Zoe's Closet</h4>
+          <p>Curated Depop listings from Calgary — sustainable, budget-friendly, and ready to ship.</p>
+        </div>
+        <div>
+          <p class="eyebrow">Depop</p>
+          <p><a href="https://www.depop.com/zoessorenson/" target="_blank" rel="noreferrer">@zoessorenson</a></p>
+          <p>Active daily</p>
+        </div>
+        <div>
+          <p class="eyebrow">Stay in touch</p>
+          <a href="mailto:shop@zoescloset.test">shop@zoescloset.test</a>
+          <a href="https://www.instagram.com/" target="_blank" rel="noreferrer">Instagram</a>
+        </div>
+        <div>
+          <p class="eyebrow">Data source</p>
+          <p>Listings + imagery belong to their respective Depop creators.</p>
+        </div>
+      </div>
+      <p class="copyright">© <span id="year"></span> Zoe's Closet. Built to spotlight the Depop shop.</p>
+    </footer>
+
+    <script src="script.js" defer></script>
+  </body>
+</html>
