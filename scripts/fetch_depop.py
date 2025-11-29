@@ -6,8 +6,6 @@ import os
 from pathlib import Path
 from typing import Any, Optional
 
-import time
-
 import requests
 
 
@@ -18,10 +16,7 @@ API_URL = f"https://webapi.depop.com/api/v2/shop/{DEPOP_USERNAME}/products/"
 DEFAULT_HEADERS = {
     "Accept": "application/json",
     # Depop returns 403s to generic clients; use a descriptive agent to reduce blocks.
-    "User-Agent": os.getenv("DEPOP_USER_AGENT", "ZoesShopDataFetcher/1.0"),
-    "Accept-Language": "en-US,en;q=0.9",
-    "Connection": "keep-alive",
-    "Referer": "https://www.depop.com/",
+    "User-Agent": "ZoesShopDataFetcher/1.0",
 }
 OUTPUT_FILE = Path(__file__).resolve().parent.parent / "data" / "products.json"
 
@@ -76,36 +71,21 @@ def normalize_product(raw: dict[str, Any]) -> dict[str, str]:
 
 
 def fetch_products() -> Optional[list[dict[str, str]]]:
-    attempts = 3
-    backoff = 2.0
-    for attempt in range(1, attempts + 1):
-        try:
-            response = requests.get(
-                API_URL,
-                params={"limit": 200},
-                headers=DEFAULT_HEADERS,
-                timeout=20,
-            )
-            response.raise_for_status()
-            break
-        except requests.HTTPError as exc:
-            status = exc.response.status_code if exc.response is not None else "?"
-            print(
-                f"Warning: Depop API returned HTTP {status} on attempt {attempt}/{attempts};"
-                " retrying..." if attempt < attempts else " using cached products if available."
-            )
-            if status not in {429, 500, 502, 503, 504} or attempt == attempts:
-                return None
-        except requests.RequestException as exc:
-            print(
-                f"Warning: unable to reach Depop API on attempt {attempt}/{attempts} ({exc});"
-                " retrying..." if attempt < attempts else " using cached products if available."
-            )
-            if attempt == attempts:
-                return None
-
-        time.sleep(backoff)
-        backoff *= 2
+    try:
+        response = requests.get(
+            API_URL,
+            params={"limit": 200},
+            headers=DEFAULT_HEADERS,
+            timeout=20,
+        )
+        response.raise_for_status()
+    except requests.HTTPError as exc:
+        status = exc.response.status_code if exc.response is not None else "?"
+        print(f"Warning: Depop API returned HTTP {status}; using cached products if available.")
+        return None
+    except requests.RequestException as exc:
+        print(f"Warning: unable to reach Depop API ({exc}); using cached products if available.")
+        return None
 
     payload: Any = response.json()
 
