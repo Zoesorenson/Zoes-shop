@@ -1,2 +1,4 @@
 depop.cookie
 .env
+
+scripts/update.log
