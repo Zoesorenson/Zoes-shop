@@ -353,7 +353,12 @@ async def _scrape_with_playwright(username: str) -> list[dict[str, str]]:
 
     async with async_playwright() as p:
         # Headless requests are blocked by Depop/Cloudflare; use a visible browser.
-        headless = os.getenv("DEPOP_PLAYWRIGHT_HEADLESS") == "1"
+        headless_env = (os.getenv("DEPOP_PLAYWRIGHT_HEADLESS") or "").lower()
+        headless = headless_env in {"1", "true", "yes"}
+        if headless:
+            print("Warning: headless Playwright is likely to be blocked; forcing visible browser.")
+            headless = False
+
         browser = await p.chromium.launch(headless=headless)
         context = await browser.new_context()
 
@@ -426,7 +431,24 @@ async def _scrape_with_playwright(username: str) -> list[dict[str, str]]:
             finally:
                 await item_page.close()
 
-        await browser.close()
+        try:
+            cookies = await context.cookies()
+            depop_cookies = [
+                cookie for cookie in cookies if "depop" in (cookie.get("domain") or "")
+            ]
+            cookie_header = "; ".join(
+                f"{cookie['name']}={cookie['value']}"
+                for cookie in depop_cookies
+                if cookie.get("name") and cookie.get("value")
+            )
+            if cookie_header:
+                COOKIE_FILE.parent.mkdir(parents=True, exist_ok=True)
+                COOKIE_FILE.write_text(cookie_header)
+                print(f"Cached Depop cookies to {COOKIE_FILE}")
+        except Exception as exc:  # pragma: no cover - defensive
+            print(f"Warning: unable to cache Depop cookies from Playwright: {exc}")
+        finally:
+            await browser.close()
 
     return products
 
