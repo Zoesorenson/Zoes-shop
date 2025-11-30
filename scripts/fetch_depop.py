@@ -104,11 +104,11 @@ def fetch_products() -> Optional[list[dict[str, str]]]:
                 f"Warning: Depop {label} endpoint returned HTTP {status}; "
                 "trying next option."
             )
-            if status == 403:
+            if status in {400, 403}:
                 print(
-                    "Tip: Depop can block CI IPs. You can pass a DEPOP_COOKIE "
-                    "environment variable with a valid session cookie to reduce "
-                    "403 responses."
+                    "Tip: Depop can block CI IPs or require a valid session. "
+                    "Verify the username and try passing a DEPOP_COOKIE "
+                    "environment variable with a logged-in cookie value."
                 )
             continue
         except error.URLError as exc:
