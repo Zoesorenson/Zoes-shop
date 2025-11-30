@@ -131,13 +131,18 @@ h4 {
   width: 48px;
   height: 48px;
   border-radius: 50%;
-  background: var(--ink);
+  background:
+    linear-gradient(rgba(0, 0, 0, 0.35), rgba(0, 0, 0, 0.35)),
+    url("IMG_9331.JPG") center/cover;
+  border: 2px solid rgba(255, 255, 255, 0.8);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
   color: var(--cream);
   display: grid;
   place-items: center;
   font-family: "Playfair Display", serif;
   font-weight: 600;
   font-size: 1rem;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.45);
 }
 
 nav {
