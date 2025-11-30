@@ -6,7 +6,7 @@ import os
 from pathlib import Path
 from typing import Any, Iterable, Optional
 
-import requests
+from urllib import error, parse, request
 
 
 DEFAULT_USERNAME = "shopy2z"
@@ -24,6 +24,28 @@ DEFAULT_HEADERS = {
     "Origin": "https://www.depop.com",
 }
 OUTPUT_FILE = Path(__file__).resolve().parent.parent / "data" / "products.json"
+COOKIE_FILE = Path(__file__).resolve().parent.parent / "depop.cookie"
+
+
+def _load_cookie() -> tuple[str, Optional[str]]:
+    env_cookie = (os.getenv("DEPOP_COOKIE") or "").strip()
+    if env_cookie:
+        return env_cookie, "DEPOP_COOKIE environment variable"
+
+    cookie_path = os.getenv("DEPOP_COOKIE_FILE")
+    if cookie_path:
+        path = Path(cookie_path)
+        if path.exists():
+            return path.read_text().strip(), str(path)
+
+    if COOKIE_FILE.exists():
+        return COOKIE_FILE.read_text().strip(), str(COOKIE_FILE)
+
+    return "", None
+
+
+DEPOP_COOKIE, DEPOP_COOKIE_SOURCE = _load_cookie()
+DISABLE_PROXY = os.getenv("DEPOP_DISABLE_PROXY") == "1"
 
 
 def _endpoint_urls(username: str) -> Iterable[tuple[str, str]]:
@@ -82,35 +104,63 @@ def normalize_product(raw: dict[str, Any]) -> dict[str, str]:
 
 
 def fetch_products() -> Optional[list[dict[str, str]]]:
-    session = requests.Session()
-    session.headers.update({
+    base_headers = {
         **DEFAULT_HEADERS,
         "Referer": f"https://www.depop.com/{DEPOP_USERNAME}/",
-    })
+    }
+    if DEPOP_COOKIE:
+        base_headers["Cookie"] = DEPOP_COOKIE
+
+    if DEPOP_COOKIE_SOURCE:
+        print(f"Using Depop cookie from {DEPOP_COOKIE_SOURCE}")
+
+    handlers = []
+    if DISABLE_PROXY:
+        handlers.append(request.ProxyHandler({}))
+    opener = request.build_opener(*handlers)
 
     for label, url in _endpoint_urls(DEPOP_USERNAME):
+        full_url = f"{url}?{parse.urlencode({'limit': 200})}"
+
         try:
-            response = session.get(
-                url,
-                params={"limit": 200},
-                timeout=20,
-            )
-            response.raise_for_status()
-        except requests.HTTPError as exc:
-            status = exc.response.status_code if exc.response is not None else "?"
+            req = request.Request(full_url, headers=base_headers, method="GET")
+            with opener.open(req, timeout=20) as resp:  # noqa: S310 - external URL fetch
+                status = resp.status
+                body = resp.read()
+        except error.HTTPError as exc:
+            status = exc.code
             print(
                 f"Warning: Depop {label} endpoint returned HTTP {status}; "
                 "trying next option."
             )
+            if status in {400, 403}:
+                print(
+                    "Tip: Depop can block CI IPs or require a valid session. "
+                    "Verify the username and try passing a DEPOP_COOKIE "
+                    "environment variable with a logged-in cookie value."
+                )
             continue
-        except requests.RequestException as exc:
+        except error.URLError as exc:
             print(
-                f"Warning: unable to reach Depop {label} endpoint ({exc}); "
+                f"Warning: unable to reach Depop {label} endpoint ({exc.reason}); "
+                "trying next option."
+            )
+            reason_text = str(getattr(exc, "reason", exc))
+            if "403" in reason_text and not DISABLE_PROXY:
+                print(
+                    "Tip: if a corporate proxy is blocking Depop, set DEPOP_DISABLE_PROXY=1 "
+                    "to ignore system proxy settings."
+                )
+            continue
+
+        try:
+            payload: Any = json.loads(body)
+        except json.JSONDecodeError as exc:  # pragma: no cover - defensive
+            print(
+                f"Warning: Depop {label} endpoint returned invalid JSON ({exc}); "
                 "trying next option."
             )
             continue
-
-        payload: Any = response.json()
         products = payload.get("products") or payload.get("items") or []
         normalized = [normalize_product(item) for item in products]
         filtered = [item for item in normalized if item["url"] and item["image"]]
