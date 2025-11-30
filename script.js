@@ -190,27 +190,4 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   loadProducts();
-
-  const form = document.getElementById("rsvp-form");
-  if (form) {
-    const feedback = form.querySelector(".form-feedback");
-    form.addEventListener("submit", (event) => {
-      event.preventDefault();
-      const formData = new FormData(form);
-      const name = formData.get("name");
-      const email = formData.get("email");
-      const message = formData.get("message");
-
-      const recipient = "sorensonzoe@gmail.com";
-      const subject = encodeURIComponent(`Hold request from ${name || "Depop shopper"}`);
-      const body = encodeURIComponent(
-        `Name/Handle: ${name || "N/A"}\nEmail: ${email || "N/A"}\n\nMessage:\n${message || ""}`
-      );
-
-      window.location.href = `mailto:${recipient}?subject=${subject}&body=${body}`;
-
-      feedback.textContent = `Thanks, ${name || "friend"}! I'll reply via email or Depop ASAP.`;
-      form.reset();
-    });
-  }
 });

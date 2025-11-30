@@ -542,41 +542,18 @@ nav a:focus-visible::after {
   background: var(--linen);
 }
 
+.contact-actions {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-top: 1.5rem;
+}
+
 .visit-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: 2.5rem;
   align-items: start;
-}
-
-.rsvp-form {
-  display: grid;
-  gap: 1rem;
-  margin-top: 1.5rem;
-}
-
-.rsvp-form label {
-  display: flex;
-  flex-direction: column;
-  font-weight: 600;
-  font-size: 0.9rem;
-}
-
-.rsvp-form input,
-.rsvp-form select {
-  margin-top: 0.4rem;
-  padding: 0.85rem 1rem;
-  border-radius: 12px;
-  border: 1px solid var(--border);
-  background: white;
-  font-size: 1rem;
-  font-family: inherit;
-}
-
-.form-feedback {
-  min-height: 1.2rem;
-  font-size: 0.9rem;
-  color: var(--sage);
 }
 
 .visit-card {
@@ -611,17 +588,6 @@ nav a:focus-visible::after {
 
 .badge-card h4 {
   margin-top: 0;
-}
-
-.rsvp-form textarea {
-  margin-top: 0.4rem;
-  padding: 0.85rem 1rem;
-  border-radius: 12px;
-  border: 1px solid var(--border);
-  background: white;
-  font-size: 1rem;
-  font-family: inherit;
-  resize: vertical;
 }
 
 .site-footer {
