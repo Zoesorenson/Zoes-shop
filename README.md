@@ -49,3 +49,5 @@ jobs:
 ```
 
 The workflow fetches your Depop page, parses listings into `data/products.json`, and pushes the refreshed JSON back to the repo. GitHub Pages will publish the new data automatically, so visitors always see the latest items.
+
+> **Tip:** Depop sometimes blocks requests from CI providers. If you hit repeated 403s while running `scripts/fetch_depop.py`, pass a valid `DEPOP_COOKIE` environment variable (copied from a logged-in browser session) so Depop recognizes the request.

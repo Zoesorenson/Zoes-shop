@@ -6,7 +6,7 @@ import os
 from pathlib import Path
 from typing import Any, Iterable, Optional
 
-import requests
+from urllib import error, parse, request
 
 
 DEFAULT_USERNAME = "shopy2z"
@@ -23,6 +23,7 @@ DEFAULT_HEADERS = {
     ),
     "Origin": "https://www.depop.com",
 }
+DEPOP_COOKIE = (os.getenv("DEPOP_COOKIE") or "").strip()
 OUTPUT_FILE = Path(__file__).resolve().parent.parent / "data" / "products.json"
 
 
@@ -82,35 +83,49 @@ def normalize_product(raw: dict[str, Any]) -> dict[str, str]:
 
 
 def fetch_products() -> Optional[list[dict[str, str]]]:
-    session = requests.Session()
-    session.headers.update({
+    base_headers = {
         **DEFAULT_HEADERS,
         "Referer": f"https://www.depop.com/{DEPOP_USERNAME}/",
-    })
+    }
+    if DEPOP_COOKIE:
+        base_headers["Cookie"] = DEPOP_COOKIE
 
     for label, url in _endpoint_urls(DEPOP_USERNAME):
+        full_url = f"{url}?{parse.urlencode({'limit': 200})}"
+
         try:
-            response = session.get(
-                url,
-                params={"limit": 200},
-                timeout=20,
-            )
-            response.raise_for_status()
-        except requests.HTTPError as exc:
-            status = exc.response.status_code if exc.response is not None else "?"
+            req = request.Request(full_url, headers=base_headers, method="GET")
+            with request.urlopen(req, timeout=20) as resp:  # noqa: S310 - external URL fetch
+                status = resp.status
+                body = resp.read()
+        except error.HTTPError as exc:
+            status = exc.code
             print(
                 f"Warning: Depop {label} endpoint returned HTTP {status}; "
                 "trying next option."
             )
+            if status == 403:
+                print(
+                    "Tip: Depop can block CI IPs. You can pass a DEPOP_COOKIE "
+                    "environment variable with a valid session cookie to reduce "
+                    "403 responses."
+                )
             continue
-        except requests.RequestException as exc:
+        except error.URLError as exc:
             print(
-                f"Warning: unable to reach Depop {label} endpoint ({exc}); "
+                f"Warning: unable to reach Depop {label} endpoint ({exc.reason}); "
                 "trying next option."
             )
             continue
 
-        payload: Any = response.json()
+        try:
+            payload: Any = json.loads(body)
+        except json.JSONDecodeError as exc:  # pragma: no cover - defensive
+            print(
+                f"Warning: Depop {label} endpoint returned invalid JSON ({exc}); "
+                "trying next option."
+            )
+            continue
         products = payload.get("products") or payload.get("items") or []
         normalized = [normalize_product(item) for item in products]
         filtered = [item for item in normalized if item["url"] and item["image"]]
