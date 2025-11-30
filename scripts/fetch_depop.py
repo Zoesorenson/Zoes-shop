@@ -167,6 +167,28 @@ def _canonicalize_category(*candidates: str) -> str:
     return "misc"
 
 
+def _is_sold(raw: dict[str, Any]) -> bool:
+    """Return True when Depop marks an item as sold or unavailable."""
+    status_fields = (
+        str(raw.get("status") or raw.get("state") or "").lower(),
+        str(raw.get("visibility") or "").lower(),
+    )
+
+    sold_markers = {"sold", "sold_out", "sold-out", "sold out", "unavailable"}
+    if any(status in sold_markers for status in status_fields):
+        return True
+
+    if raw.get("sold") is True:
+        return True
+
+    # Depop sometimes exposes availability as a boolean or int.
+    available = raw.get("available")
+    if available in (False, 0):
+        return True
+
+    return False
+
+
 def normalize_product(raw: dict[str, Any]) -> dict[str, str]:
     title = raw.get("title") or raw.get("name") or "Untitled item"
 
@@ -277,7 +299,24 @@ def fetch_products() -> Optional[list[dict[str, str]]]:
             )
             continue
         products = payload.get("products") or payload.get("items") or []
-        normalized = [normalize_product(item) for item in products]
+        filtered_products = [item for item in products if not _is_sold(item)]
+        if filtered_products:
+            kept_products = filtered_products
+            if len(filtered_products) != len(products):
+                print(
+                    f"Filtered out {len(products) - len(filtered_products)} sold items "
+                    f"from Depop {label} response."
+                )
+        elif products:
+            print(
+                "Warning: Depop response flagged everything as sold; "
+                "keeping unfiltered products to avoid an empty feed."
+            )
+            kept_products = products
+        else:
+            kept_products = products
+
+        normalized = [normalize_product(item) for item in kept_products]
         filtered = [item for item in normalized if item["url"] and item["image"]]
 
         if filtered:
@@ -342,6 +381,15 @@ async def _scrape_with_playwright(username: str) -> list[dict[str, str]]:
             try:
                 await item_page.goto(link, wait_until="domcontentloaded", timeout=60_000)
                 await item_page.wait_for_timeout(2_000)
+
+                buy_now_cta = await item_page.locator("button:has-text('Buy now')").count()
+                add_to_bag_cta = await item_page.locator(
+                    "button:has-text('Add to bag')"
+                ).count()
+                sold_cta = await item_page.locator("button:has-text('Sold')").count()
+                if sold_cta or (buy_now_cta + add_to_bag_cta) == 0:
+                    print(f"Skipping sold Depop listing: {link}")
+                    continue
 
                 async def _get_meta(prop: str) -> str:
                     selector = f"meta[property='{prop}']"
