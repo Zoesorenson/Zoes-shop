@@ -83,10 +83,57 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const productGrid = document.getElementById("depop-grid");
   const filterButtons = document.querySelectorAll(".filter-btn");
+  const canonicalizeCategory = (value = "", fallbackText = "") => {
+    const cleaned = (value || "").toLowerCase().trim();
+    const searchText = `${cleaned} ${(fallbackText || "").toLowerCase()}`;
+    const buckets = {
+      tops: ["top", "tee", "shirt", "sweater", "knit", "hoodie", "crewneck", "crew", "cardigan", "vest", "dress", "bodysuit", "body suit"],
+      bottoms: ["jean", "pant", "trouser", "short", "skirt", "legging", "cargo", "trunk", "swim"],
+      outerwear: ["coat", "jacket", "puffer", "windbreaker", "shell", "blazer", "trench", "fleece"],
+      accessories: [
+        "bag",
+        "purse",
+        "tote",
+        "wallet",
+        "necklace",
+        "bracelet",
+        "ring",
+        "earring",
+        "jewelry",
+        "belt",
+        "scarf",
+        "hat",
+        "beanie",
+        "cap",
+        "sunglass",
+        "sandal",
+        "shoe",
+        "sneaker",
+        "boot",
+        "loafer",
+        "heel"
+      ],
+    };
+
+    if (["tops", "bottoms", "outerwear", "accessories"].includes(cleaned)) {
+      return cleaned;
+    }
+
+    for (const [bucket, keywords] of Object.entries(buckets)) {
+      if (keywords.some((keyword) => searchText.includes(keyword))) {
+        return bucket;
+      }
+    }
+
+    return "misc";
+  };
 
   const renderProducts = (category = "all") => {
     if (!productGrid) return;
-    const filtered = curatedProducts.filter((item) => category === "all" || item.category === category);
+    const filtered = curatedProducts.filter((item) => {
+      const canonicalCategory = canonicalizeCategory(item.category, `${item.title} ${item.description} ${item.tag}`);
+      return category === "all" || canonicalCategory === category;
+    });
 
     if (!filtered.length) {
       productGrid.innerHTML = '<p class="note">No listings match that filter right now — DM me on Depop for first dibs.</p>';
@@ -95,8 +142,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const markup = filtered
       .map((item) => {
+        const canonicalCategory = canonicalizeCategory(item.category, `${item.title} ${item.description} ${item.tag}`);
         return `
-          <article class="product-card" data-category="${item.category}">
+          <article class="product-card" data-category="${canonicalCategory}">
             <img src="${item.image}" alt="${item.title}" loading="lazy" />
             <div class="product-card__body">
               <p class="eyebrow">${item.tag}</p>

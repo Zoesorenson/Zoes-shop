@@ -25,6 +25,87 @@ DEFAULT_HEADERS = {
     ),
     "Origin": "https://www.depop.com",
 }
+CANONICAL_CATEGORIES = ("tops", "bottoms", "outerwear", "accessories")
+CATEGORY_KEYWORDS = {
+    "outerwear": (
+        "coat",
+        "jacket",
+        "outerwear",
+        "puffer",
+        "windbreaker",
+        "shell",
+        "parka",
+        "blazer",
+        "trench",
+        "fleece",
+        "gilet",
+    ),
+    "tops": (
+        "top",
+        "tee",
+        "t-shirt",
+        "shirt",
+        "sweater",
+        "jumper",
+        "hoodie",
+        "crewneck",
+        "cardigan",
+        "sweatshirt",
+        "pullover",
+        "vest",
+        "crew",
+        "bodysuit",
+        "body suit",
+        "blouse",
+        "polo",
+        "tank",
+        "camisole",
+        "long sleeve",
+        "quarter zip",
+        "dress",
+    ),
+    "bottoms": (
+        "bottom",
+        "jean",
+        "denim",
+        "pant",
+        "trouser",
+        "short",
+        "trunk",
+        "swim",
+        "skirt",
+        "legging",
+        "cargo",
+        "sweatpant",
+        "jogger",
+    ),
+    "accessories": (
+        "accessories",
+        "accessory",
+        "bag",
+        "purse",
+        "tote",
+        "wallet",
+        "necklace",
+        "bracelet",
+        "ring",
+        "earring",
+        "jewelry",
+        "belt",
+        "scarf",
+        "beanie",
+        "hat",
+        "cap",
+        "sunglasses",
+        "glove",
+        "sandal",
+        "shoe",
+        "sneaker",
+        "boot",
+        "loafer",
+        "heel",
+    ),
+}
 OUTPUT_FILE = Path(__file__).resolve().parent.parent / "data" / "products.json"
 COOKIE_FILE = Path(__file__).resolve().parent.parent / "depop.cookie"
 
@@ -54,6 +135,36 @@ def _endpoint_urls(username: str) -> Iterable[tuple[str, str]]:
     yield "primary", f"https://webapi.depop.com/api/v2/shop/{username}/products/"
     # Fallback to the older endpoint if the v2 API blocks the request.
     yield "legacy", f"https://webapi.depop.com/api/v1/shop/{username}/products/"
+
+
+def _canonicalize_category(*candidates: str) -> str:
+    """Map Depop category text to one of the UI buckets."""
+    def _matches(value: str, keyword: str) -> bool:
+        return bool(re.search(rf"\b{re.escape(keyword)}\w*", value))
+
+    normalized = []
+    for value in candidates:
+        cleaned = (value or "").strip().lower()
+        if cleaned:
+            normalized.append(cleaned)
+
+    for value in normalized:
+        if value in CANONICAL_CATEGORIES:
+            return value
+
+    for value in normalized:
+        for canonical, keywords in CATEGORY_KEYWORDS.items():
+            for keyword in keywords:
+                if _matches(value, keyword):
+                    return canonical
+
+    combined = " ".join(normalized)
+    for canonical, keywords in CATEGORY_KEYWORDS.items():
+        for keyword in keywords:
+            if _matches(combined, keyword):
+                return canonical
+
+    return "misc"
 
 
 def normalize_product(raw: dict[str, Any]) -> dict[str, str]:
@@ -94,13 +205,15 @@ def normalize_product(raw: dict[str, Any]) -> dict[str, str]:
 
     tag = raw.get("brand") or category or "Depop find"
 
+    canonical_category = _canonicalize_category(category, title, description, tag)
+
     return {
         "title": title,
         "price": price_text or "",
         "url": url,
         "image": image_url,
         "description": description,
-        "category": category.lower(),
+        "category": canonical_category,
         "tag": tag,
     }
 
@@ -249,6 +362,7 @@ async def _scrape_with_playwright(username: str) -> list[dict[str, str]]:
                 price = price_match.group(0) if price_match else ""
 
                 tag = _extract_hashtag(description) or "Depop find"
+                category = _canonicalize_category(tag, title, description)
 
                 products.append(
                     {
@@ -257,7 +371,7 @@ async def _scrape_with_playwright(username: str) -> list[dict[str, str]]:
                         "url": link,
                         "image": og_image,
                         "description": description,
-                        "category": "misc",
+                        "category": category,
                         "tag": tag,
                     }
                 )
