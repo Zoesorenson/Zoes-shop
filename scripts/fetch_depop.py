@@ -201,7 +201,8 @@ async def _scrape_with_playwright(username: str) -> list[dict[str, str]]:
 
     async with async_playwright() as p:
         # Headless requests are blocked by Depop/Cloudflare; use a visible browser.
-        browser = await p.chromium.launch(headless=False)
+        headless = os.getenv("DEPOP_PLAYWRIGHT_HEADLESS") == "1"
+        browser = await p.chromium.launch(headless=headless)
         context = await browser.new_context()
 
         shop_url = f"https://www.depop.com/{username}/"
