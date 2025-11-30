@@ -6,7 +6,7 @@ import json
 import os
 import re
 from pathlib import Path
-from typing import Any, Iterable, Optional, Sequence
+from typing import Any, Iterable, NamedTuple, Optional, Sequence
 
 from urllib import error, parse, request
 
@@ -131,6 +131,11 @@ DEPOP_COOKIE, DEPOP_COOKIE_SOURCE = _load_cookie()
 DISABLE_PROXY = os.getenv("DEPOP_DISABLE_PROXY") == "1"
 
 
+class FetchResult(NamedTuple):
+    products: Optional[list[dict[str, str]]]
+    blocked: bool
+
+
 def _endpoint_urls(username: str) -> Iterable[tuple[str, str]]:
     yield "primary", f"https://webapi.depop.com/api/v2/shop/{username}/products/"
     # Fallback to the older endpoint if the v2 API blocks the request.
@@ -240,7 +245,8 @@ def normalize_product(raw: dict[str, Any]) -> dict[str, str]:
     }
 
 
-def fetch_products() -> Optional[list[dict[str, str]]]:
+def fetch_products() -> FetchResult:
+    blocked = False
     base_headers = {
         **DEFAULT_HEADERS,
         "Referer": f"https://www.depop.com/{DEPOP_USERNAME}/",
@@ -266,16 +272,17 @@ def fetch_products() -> Optional[list[dict[str, str]]]:
                 body = resp.read()
         except error.HTTPError as exc:
             status = exc.code
+            if status in {400, 403}:
+                blocked = True
             print(
                 f"Warning: Depop {label} endpoint returned HTTP {status}; "
                 "trying next option."
             )
-            if status in {400, 403}:
-                print(
-                    "Tip: Depop can block CI IPs or require a valid session. "
-                    "Verify the username and try passing a DEPOP_COOKIE "
-                    "environment variable with a logged-in cookie value."
-                )
+            print(
+                "Tip: Depop can block CI IPs or require a valid session. "
+                "Verify the username and try passing a DEPOP_COOKIE "
+                "environment variable with a logged-in cookie value."
+            )
             continue
         except error.URLError as exc:
             print(
@@ -284,6 +291,7 @@ def fetch_products() -> Optional[list[dict[str, str]]]:
             )
             reason_text = str(getattr(exc, "reason", exc))
             if "403" in reason_text and not DISABLE_PROXY:
+                blocked = True
                 print(
                     "Tip: if a corporate proxy is blocking Depop, set DEPOP_DISABLE_PROXY=1 "
                     "to ignore system proxy settings."
@@ -320,13 +328,13 @@ def fetch_products() -> Optional[list[dict[str, str]]]:
         filtered = [item for item in normalized if item["url"] and item["image"]]
 
         if filtered:
-            return filtered
+            return FetchResult(filtered, blocked)
 
         print(
             f"Warning: Depop {label} endpoint returned no products; trying next option."
         )
 
-    return None
+    return FetchResult(None, blocked)
 
 
 def _strip_suffix(text: str, suffix: str) -> str:
@@ -338,6 +346,59 @@ def _strip_suffix(text: str, suffix: str) -> str:
 def _extract_hashtag(text: str) -> str:
     match = re.search(r"#(\\w+)", text)
     return match.group(1) if match else ""
+
+
+def _cache_depop_cookies(cookies: Sequence[dict[str, Any]], action: str) -> bool:
+    depop_cookies = [
+        cookie for cookie in cookies if "depop" in (cookie.get("domain") or "")
+    ]
+    cookie_header = "; ".join(
+        f"{cookie['name']}={cookie['value']}"
+        for cookie in depop_cookies
+        if cookie.get("name") and cookie.get("value")
+    )
+    if cookie_header:
+        COOKIE_FILE.parent.mkdir(parents=True, exist_ok=True)
+        COOKIE_FILE.write_text(cookie_header)
+        print(f"{action} {COOKIE_FILE}")
+        return True
+
+    print("Warning: no Depop cookies found to cache.")
+    return False
+
+
+async def _refresh_cookie_with_playwright(username: str) -> bool:
+    try:
+        from playwright.async_api import async_playwright
+    except ImportError as exc:  # pragma: no cover - optional dependency
+        print(
+            "Playwright is not installed; skipping cookie refresh. "
+            "Install it with 'pip install playwright' and "
+            "'python -m playwright install chromium'."
+        )
+        return False
+
+    headless_env = (os.getenv("DEPOP_PLAYWRIGHT_HEADLESS") or "").lower()
+    headless = headless_env in {"1", "true", "yes"}
+    if headless:
+        print("Warning: headless Playwright is likely to be blocked; forcing visible browser.")
+        headless = False
+
+    async with async_playwright() as p:
+        browser = await p.chromium.launch(headless=headless)
+        context = await browser.new_context()
+        page = await context.new_page()
+
+        shop_url = f"https://www.depop.com/{username}/"
+        await page.goto(shop_url, wait_until="domcontentloaded", timeout=60_000)
+        await page.wait_for_timeout(3_000)
+        await page.close()
+
+        try:
+            cookies = await context.cookies()
+            return _cache_depop_cookies(cookies, "Refreshed Depop cookies in")
+        finally:
+            await browser.close()
 
 
 async def _scrape_with_playwright(username: str) -> list[dict[str, str]]:
@@ -433,18 +494,7 @@ async def _scrape_with_playwright(username: str) -> list[dict[str, str]]:
 
         try:
             cookies = await context.cookies()
-            depop_cookies = [
-                cookie for cookie in cookies if "depop" in (cookie.get("domain") or "")
-            ]
-            cookie_header = "; ".join(
-                f"{cookie['name']}={cookie['value']}"
-                for cookie in depop_cookies
-                if cookie.get("name") and cookie.get("value")
-            )
-            if cookie_header:
-                COOKIE_FILE.parent.mkdir(parents=True, exist_ok=True)
-                COOKIE_FILE.write_text(cookie_header)
-                print(f"Cached Depop cookies to {COOKIE_FILE}")
+            _cache_depop_cookies(cookies, "Cached Depop cookies to")
         except Exception as exc:  # pragma: no cover - defensive
             print(f"Warning: unable to cache Depop cookies from Playwright: {exc}")
         finally:
@@ -457,7 +507,22 @@ def main() -> None:
     if not env_username:
         print("DEPOP_USERNAME not set; using default from script.")
 
-    products = fetch_products()
+    result = fetch_products()
+    products = result.products
+    blocked = result.blocked
+
+    if blocked:
+        print("Depop API blocked the request; refreshing cookie with Playwright...")
+        try:
+            refreshed = asyncio.run(_refresh_cookie_with_playwright(DEPOP_USERNAME))
+        except Exception as exc:  # pragma: no cover - runtime only
+            print(f"Cookie refresh failed: {exc}")
+            refreshed = False
+
+        if refreshed:
+            retry_result = fetch_products()
+            products = retry_result.products or products
+            blocked = retry_result.blocked
 
     if not products:
         print("HTTP scrape failed; trying Playwright fallback...")
