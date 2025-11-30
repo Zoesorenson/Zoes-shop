@@ -1,10 +1,12 @@
 """Fetch Depop listings and save them to data/products.json."""
 from __future__ import annotations
 
+import asyncio
 import json
 import os
+import re
 from pathlib import Path
-from typing import Any, Iterable, Optional
+from typing import Any, Iterable, Optional, Sequence
 
 from urllib import error, parse, request
 
@@ -175,11 +177,109 @@ def fetch_products() -> Optional[list[dict[str, str]]]:
     return None
 
 
+def _strip_suffix(text: str, suffix: str) -> str:
+    if text.endswith(suffix):
+        return text[: -len(suffix)]
+    return text
+
+
+def _extract_hashtag(text: str) -> str:
+    match = re.search(r"#(\\w+)", text)
+    return match.group(1) if match else ""
+
+
+async def _scrape_with_playwright(username: str) -> list[dict[str, str]]:
+    try:
+        from playwright.async_api import async_playwright
+    except ImportError as exc:  # pragma: no cover - optional dependency
+        raise RuntimeError(
+            "Playwright is not installed. Run 'pip install playwright' "
+            "and 'python -m playwright install chromium'."
+        ) from exc
+
+    products: list[dict[str, str]] = []
+
+    async with async_playwright() as p:
+        # Headless requests are blocked by Depop/Cloudflare; use a visible browser.
+        browser = await p.chromium.launch(headless=False)
+        context = await browser.new_context()
+
+        shop_url = f"https://www.depop.com/{username}/"
+        page = await context.new_page()
+        await page.goto(shop_url, wait_until="domcontentloaded", timeout=60_000)
+        await page.wait_for_timeout(3_000)
+
+        # Grab product links from the grid.
+        link_js = """
+        () => Array.from(
+            document.querySelectorAll(".styles_productCardRoot__DaYPT a[href*='/products/']")
+        ).map((el) => el.href)
+        """
+        links: Sequence[str] = await page.evaluate(link_js)
+        await page.close()
+
+        seen = set()
+        for link in links:
+            if not link or link in seen:
+                continue
+            seen.add(link)
+
+            item_page = await context.new_page()
+            try:
+                await item_page.goto(link, wait_until="domcontentloaded", timeout=60_000)
+                await item_page.wait_for_timeout(2_000)
+
+                async def _get_meta(prop: str) -> str:
+                    selector = f"meta[property='{prop}']"
+                    value = await item_page.eval_on_selector(
+                        selector, "el => el ? el.content : ''"
+                    )
+                    return value or ""
+
+                og_title = await _get_meta("og:title")
+                og_desc = await _get_meta("og:description")
+                og_image = await _get_meta("og:image")
+
+                body_text = await item_page.locator("body").inner_text()
+                price_match = re.search(r"\\$\\d[\\d.,]*", body_text)
+
+                title = _strip_suffix(og_title, " | Depop").strip() or "Depop item"
+                description = (og_desc or "").strip()
+                price = price_match.group(0) if price_match else ""
+
+                tag = _extract_hashtag(description) or "Depop find"
+
+                products.append(
+                    {
+                        "title": title,
+                        "price": price,
+                        "url": link,
+                        "image": og_image,
+                        "description": description,
+                        "category": "misc",
+                        "tag": tag,
+                    }
+                )
+            finally:
+                await item_page.close()
+
+        await browser.close()
+
+    return products
+
+
 def main() -> None:
     if not env_username:
         print("DEPOP_USERNAME not set; using default from script.")
 
     products = fetch_products()
+
+    if not products:
+        print("HTTP scrape failed; trying Playwright fallback...")
+        try:
+            products = asyncio.run(_scrape_with_playwright(DEPOP_USERNAME))
+        except Exception as exc:  # pragma: no cover - runtime only
+            print(f"Playwright fallback failed: {exc}")
 
     if not products:
         if OUTPUT_FILE.exists():
