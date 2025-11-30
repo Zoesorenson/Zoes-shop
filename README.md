@@ -49,3 +49,8 @@ jobs:
 ```
 
 The workflow fetches your Depop page, parses listings into `data/products.json`, and pushes the refreshed JSON back to the repo. GitHub Pages will publish the new data automatically, so visitors always see the latest items.
+
+> **Tip:** Depop sometimes blocks requests from CI providers or responds with HTTP 400/403 when the session looks suspicious. If you see these codes while running `scripts/fetch_depop.py`, double-check the username and pass a valid `DEPOP_COOKIE` environment variable (copied from a logged-in browser session) so Depop recognizes the request. You can also store the cookie text in a `depop.cookie` file (or point to another path via `DEPOP_COOKIE_FILE`) and set `DEPOP_DISABLE_PROXY=1` if a corporate proxy is intercepting Depop requests.
+
+## Refreshing listings locally (macOS)
+Run `./update_depop.sh` from the repo root to pull the latest Depop items into `data/products.json` and commit them to the `main` branch. The script uses `python3` by default, respects `DEPOP_USERNAME`/`DEPOP_COOKIE`/`DEPOP_COOKIE_FILE`/`DEPOP_DISABLE_PROXY` for authentication, and only commits when `data/products.json` changes. Set `PUSH_AFTER_COMMIT=1` if you want it to push to `origin/main` automatically.
