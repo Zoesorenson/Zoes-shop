@@ -2,3 +2,4 @@ depop.cookie
 .env
 
 scripts/update.log
+.DS_Store
