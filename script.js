@@ -145,7 +145,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const canonicalCategory = canonicalizeCategory(item.category, `${item.title} ${item.description} ${item.tag}`);
         return `
           <article class="product-card" data-category="${canonicalCategory}">
-            <img src="${item.image}" alt="${item.title}" loading="lazy" />
+            <img src="${item.image}" alt="${item.title} - Y2K style from Zoe's Depop shop" loading="lazy" />
             <div class="product-card__body">
               <p class="eyebrow">${item.tag}</p>
               <h4>${item.title}</h4>
